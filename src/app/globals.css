@@ -156,3 +156,26 @@ table.sheet th, table.sheet td { font-size: 13px; }
   table.sheet select, table.sheet input { min-width: 120px; }
   .actions { display: flex; flex-wrap: wrap; gap: 8px; }
 }
+
+.table-wrap { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+
+@media (max-width: 800px) {
+  .people-list .sheet { display: none; }
+  .people-cards { display: flex; flex-direction: column; gap: 12px; }
+  .person-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    background: #fff;
+  }
+  .person-card label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin: 8px 0 4px;
+  }
+  .person-card input, .person-card select { width: 100%; margin: 0 0 6px; }
+}
+@media (min-width: 801px) {
+  .people-cards { display: none; }
+}

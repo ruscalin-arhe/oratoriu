@@ -128,6 +128,7 @@ export default function PeoplePage() {
         <button type="button" onClick={add}>Adaugă</button>
       </div>
 
+      <div className="table-wrap">
       <table className="sheet">
         <thead>
           <tr>
@@ -198,6 +199,7 @@ export default function PeoplePage() {
           ))}
         </tbody>
       </table>
+      </div>
     </main>
   );
 }
