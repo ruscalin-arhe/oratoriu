@@ -139,3 +139,20 @@ h1 { font-size: 22px; }
 main { padding: 20px; }
 input, select, button { font-size: 13px; }
 table.sheet th, table.sheet td { font-size: 13px; }
+
+@media (max-width: 800px) {
+  .shell { display: block; }
+  .side {
+    width: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+    padding: 12px 14px;
+  }
+  .side nav { flex-direction: row; flex-wrap: wrap; gap: 6px; }
+  .side a { padding: 6px 8px; font-size: 12px; }
+  .content { padding: 12px; }
+  main { padding: 14px; overflow-x: auto; }
+  table.sheet { display: block; overflow-x: auto; white-space: nowrap; }
+  table.sheet select, table.sheet input { min-width: 120px; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; }
+}
