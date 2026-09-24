@@ -179,3 +179,20 @@ table.sheet th, table.sheet td { font-size: 13px; }
 @media (min-width: 801px) {
   .people-cards { display: none; }
 }
+
+.stack { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; }
+.stack input, .stack select, .stack button { width: 100%; margin: 0; }
+.people-cards { display: flex; flex-direction: column; gap: 12px; }
+.person-card {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+}
+.person-card label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+.person-card input, .person-card select { width: 100%; margin: 0; }
