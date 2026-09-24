@@ -1,0 +1,133 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum DayStatus {
+  MISSING
+  DRAFT
+  SUBMITTED
+}
+
+enum EntryStatus {
+  DRAFT
+  SUBMITTED
+}
+
+model User {
+  id                 String   @id @default(cuid())
+  email              String   @unique
+  name               String
+  role               Role     @default(EMPLOYEE)
+  active             Boolean  @default(true)
+  expectedDailyHours Decimal  @default(8) @db.Decimal(4, 2)
+  reminderTime       String   @default("17:30")
+  notifyEmail        Boolean  @default(true)
+  passwordHash       String?
+  costRate           Decimal? @db.Decimal(10, 2)
+  billRate           Decimal? @db.Decimal(10, 2)
+  createdAt          DateTime @default(now())
+
+  memberships ProjectMember[]
+  timeEntries TimeEntry[]
+  dayReports  DayReport[]
+  timeOff     TimeOff[]
+}
+
+model Client {
+  id       String    @id @default(cuid())
+  name     String
+  active   Boolean   @default(true)
+  projects Project[]
+}
+
+model Project {
+  id          String          @id @default(cuid())
+  clientId    String
+  client      Client          @relation(fields: [clientId], references: [id])
+  name        String
+  status      ProjectStatus   @default(ACTIVE)
+  billRate    Decimal?        @db.Decimal(10, 2)
+  budgetHours Decimal?        @db.Decimal(8, 2)
+  tasks       Task[]
+  members     ProjectMember[]
+  timeEntries TimeEntry[]
+}
+
+model Task {
+  id          String      @id @default(cuid())
+  projectId   String
+  project     Project     @relation(fields: [projectId], references: [id])
+  name        String
+  active      Boolean     @default(true)
+  timeEntries TimeEntry[]
+}
+
+model ProjectMember {
+  projectId String
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id])
+  user      User    @relation(fields: [userId], references: [id])
+
+  @@id([projectId, userId])
+}
+
+model TimeEntry {
+  id        String      @id @default(cuid())
+  userId    String
+  projectId String
+  taskId    String?
+  workDate  DateTime    @db.Date
+  minutes   Int
+  billable  Boolean     @default(true)
+  notes     String?
+  status    EntryStatus @default(DRAFT)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  user      User        @relation(fields: [userId], references: [id])
+  project   Project     @relation(fields: [projectId], references: [id])
+  task      Task?       @relation(fields: [taskId], references: [id])
+
+  @@index([userId, workDate])
+}
+
+model DayReport {
+  id             String    @id @default(cuid())
+  userId         String
+  workDate       DateTime  @db.Date
+  status         DayStatus @default(MISSING)
+  submittedAt    DateTime?
+  lastRemindedAt DateTime?
+  reminderCount  Int       @default(0)
+  user           User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, workDate])
+}
+
+model TimeOff {
+  id     String   @id @default(cuid())
+  userId String
+  date   DateTime @db.Date
+  hours  Decimal  @db.Decimal(4, 2)
+  type   String
+  user   User     @relation(fields: [userId], references: [id])
+}
+
+model Holiday {
+  date DateTime @id @db.Date
+  name String
+}
