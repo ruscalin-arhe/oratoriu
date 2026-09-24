@@ -11,13 +11,30 @@ function money(hours: number, rate?: any) {
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
-    const month = url.searchParams.get("month") || format(new Date(), "yyyy-MM");
-    const from = `${month}-01`;
+    const month = url.searchParams.get("month");
+    let from = url.searchParams.get("from");
+    let to = url.searchParams.get("to");
+
+    if (!from || !to) {
+      const m = month || format(new Date(), "yyyy-MM");
+      const start = startOfMonth(new Date(`${m}-01T00:00:00`));
+      from = format(start, "yyyy-MM-dd");
+      to = format(endOfMonth(start), "yyyy-MM-dd");
+    }
+
     const fromDate = toWorkDate(from);
-    const toDate = toWorkDate(format(endOfMonth(fromDate), "yyyy-MM-dd"));
+    const toDate = toWorkDate(to);
+    const userId = url.searchParams.get("userId") || undefined;
+    const projectId = url.searchParams.get("projectId") || undefined;
+    const clientId = url.searchParams.get("clientId") || undefined;
 
     const entries = await prisma.timeEntry.findMany({
-      where: { workDate: { gte: fromDate, lte: toDate } },
+      where: {
+        workDate: { gte: fromDate, lte: toDate },
+        ...(userId ? { userId } : {}),
+        ...(projectId ? { projectId } : {}),
+        ...(clientId ? { project: { clientId } } : {}),
+      },
       select: {
         minutes: true,
         billable: true,
@@ -45,34 +62,17 @@ export async function GET(req: Request) {
       const costRate = e.user.costRate ?? 0;
       const rev = e.billable ? money(h, billRate) : 0;
       const cst = money(h, costRate);
-
       hours += h;
       revenue += rev;
       cost += cst;
 
-      const emp = byEmp.get(e.userId) ?? {
-        id: e.userId,
-        name: e.user.name,
-        hours: 0,
-        revenue: 0,
-        cost: 0,
-      };
-      emp.hours += h;
-      emp.revenue += rev;
-      emp.cost += cst;
+      const emp = byEmp.get(e.userId) ?? { id: e.userId, name: e.user.name, hours: 0, revenue: 0, cost: 0 };
+      emp.hours += h; emp.revenue += rev; emp.cost += cst;
       byEmp.set(e.userId, emp);
 
       const label = `${e.project.client.name} / ${e.project.name}`;
-      const proj = byProj.get(e.projectId) ?? {
-        id: e.projectId,
-        label,
-        hours: 0,
-        revenue: 0,
-        cost: 0,
-      };
-      proj.hours += h;
-      proj.revenue += rev;
-      proj.cost += cst;
+      const proj = byProj.get(e.projectId) ?? { id: e.projectId, label, hours: 0, revenue: 0, cost: 0 };
+      proj.hours += h; proj.revenue += rev; proj.cost += cst;
       byProj.set(e.projectId, proj);
     }
 
@@ -85,9 +85,8 @@ export async function GET(req: Request) {
     });
 
     return NextResponse.json({
-      month,
       from,
-      to: format(endOfMonth(fromDate), "yyyy-MM-dd"),
+      to,
       totals: fin({ hours, revenue, cost }),
       employees: [...byEmp.values()].map(fin).sort((a, b) => b.profit - a.profit),
       projects: [...byProj.values()].map(fin).sort((a, b) => b.profit - a.profit),

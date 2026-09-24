@@ -10,6 +10,7 @@ export default function ProjectsPage() {
   const [activity, setActivity] = useState<Record<string, string>>({});
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [addingFor, setAddingFor] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   async function load() {
@@ -48,6 +49,7 @@ export default function ProjectsPage() {
     const json = await res.json();
     if (!res.ok) return setError(json.error || "Eroare activitate");
     setActivity((a) => ({ ...a, [projectId]: "" }));
+    setAddingFor(null);
     load();
   }
 
@@ -78,11 +80,11 @@ export default function ProjectsPage() {
   }
 
   return (
-    <main>
+    <main className="projects-page">
       <h1>Proiecte și activități</h1>
       {error && <p style={{ color: "#8a2e1a" }}>{error}</p>}
 
-      <div className="actions">
+      <div className="top-add">
         <select value={clientId} onChange={(e) => setClientId(e.target.value)}>
           <option value="">Client</option>
           {clients.map((c) => (
@@ -92,7 +94,7 @@ export default function ProjectsPage() {
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
-          placeholder='Proiect (sau — )'
+          placeholder="Proiect (sau — )"
         />
         <button type="button" onClick={addProject} disabled={!clientId}>
           Adaugă proiect
@@ -100,6 +102,12 @@ export default function ProjectsPage() {
       </div>
 
       <table className="sheet">
+        <colgroup>
+          <col style={{ width: "24%" }} />
+          <col style={{ width: "24%" }} />
+          <col style={{ width: "40%" }} />
+          <col style={{ width: "12%" }} />
+        </colgroup>
         <thead>
           <tr>
             <th>Client</th>
@@ -111,7 +119,9 @@ export default function ProjectsPage() {
         <tbody>
           {projects.map((p) => (
             <tr key={p.id}>
-              <td>{p.client?.name}</td>
+              <td>
+                <span className="cell-clip">{p.client?.name}</span>
+              </td>
               <td>
                 {editingId === p.id ? (
                   <input
@@ -119,12 +129,14 @@ export default function ProjectsPage() {
                     value={editingName}
                     onChange={(e) => setEditingName(e.target.value)}
                     onBlur={() => saveName(p.id, p.name)}
-                    onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && (e.target as HTMLInputElement).blur()
+                    }
                   />
                 ) : (
                   <button
                     type="button"
-                    className="cell-edit"
+                    className="cell-edit cell-clip"
                     onClick={() => {
                       setEditingId(p.id);
                       setEditingName(p.name);
@@ -135,18 +147,44 @@ export default function ProjectsPage() {
                 )}
               </td>
               <td>
-                {(p.tasks ?? []).map((t: any) => t.name).join(", ") || "—"}
-                <div className="actions">
-                  <input
-                    value={activity[p.id] ?? ""}
-                    onChange={(e) => setActivity((a) => ({ ...a, [p.id]: e.target.value }))}
-                    placeholder="activitate nouă"
-                    onKeyDown={(e) => e.key === "Enter" && addActivity(p.id)}
-                  />
-                  <button type="button" className="ghost" onClick={() => addActivity(p.id)}>
-                    + activitate
-                  </button>
-                </div>
+                <select
+                  value={addingFor === p.id ? "__new" : ""}
+                  onChange={(e) => {
+                    if (e.target.value === "__new") setAddingFor(p.id);
+                    else setAddingFor(null);
+                  }}
+                >
+                  <option value="">
+                    {(p.tasks ?? []).length
+                      ? `${(p.tasks ?? []).length} activități`
+                      : "Fără activități"}
+                  </option>
+                  {(p.tasks ?? []).map((t: any) => (
+                    <option key={t.id} value={t.id} disabled>
+                      {t.name}
+                    </option>
+                  ))}
+                  <option value="__new">+ activitate nouă</option>
+                </select>
+                {addingFor === p.id && (
+                  <div className="add-task" style={{ marginTop: 6 }}>
+                    <input
+                      autoFocus
+                      value={activity[p.id] ?? ""}
+                      onChange={(e) =>
+                        setActivity((a) => ({ ...a, [p.id]: e.target.value }))
+                      }
+                      placeholder="nume activitate"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") addActivity(p.id);
+                        if (e.key === "Escape") setAddingFor(null);
+                      }}
+                    />
+                    <button type="button" className="ghost" onClick={() => addActivity(p.id)}>
+                      OK
+                    </button>
+                  </div>
+                )}
               </td>
               <td>
                 <button type="button" className="ghost" onClick={() => remove(p.id, p.name)}>
