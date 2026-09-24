@@ -72,7 +72,7 @@ export default function TodayPage() {
     } catch {}
 
     if (todayJson.entries?.length) {
-      setLines(todayJson.entries.map((e) => ({
+      setLines(todayJson.entries.map((e: any) => ({
         key: e.id,
         clientId: e.project.client.id,
         projectId: e.projectId,
