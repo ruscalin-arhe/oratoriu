@@ -45,6 +45,12 @@ export async function POST(req: Request) {
 
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
-  res.cookies.set("oratoriu_email", "", { path: "/", maxAge: 0 });
+  res.cookies.set("oratoriu_email", "", {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+    expires: new Date(0),
+  });
   return res;
 }

@@ -13,7 +13,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="shell">
           <aside className="side">
-            <div className="brand">Oratoriu</div>
+            <div className="brand">
+              <a href="/">Oratoriu</a>
+            </div>
             <Who />
           </aside>
           <div className="content">{children}</div>

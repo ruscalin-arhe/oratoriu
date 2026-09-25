@@ -13,6 +13,12 @@ export function Who() {
 
   const admin = user?.role === "ADMIN";
 
+  async function changeUser(e: React.MouseEvent) {
+    e.preventDefault();
+    await fetch("/api/session", { method: "DELETE" });
+    window.location.href = "/login";
+  }
+
   return (
     <>
       <nav>
@@ -22,7 +28,9 @@ export function Who() {
         {admin && <a href="/people">Angajați</a>}
         {admin && <a href="/reports">Rapoarte</a>}
         {admin && <a href="/missing">Restanțe</a>}
-        <a href="/login">Schimbă user</a>
+        <a href="/login" onClick={changeUser}>
+          Schimbă user
+        </a>
       </nav>
       {user && <p className="who">Logat: {user.name}</p>}
     </>
