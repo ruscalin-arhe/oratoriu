@@ -2,7 +2,9 @@
 
 Pontaj intern: clienți, proiecte, activități, restanțe, profit.
 
-Ultima actualizare: 24 septembrie 2026
+Ultima actualizare: 25 septembrie 2026
+
+Vezi și: [01-stare](./01-stare.md) · [02-arhitectură](./02-arhitectura.md) · [03-de-făcut](./03-de-facut.md) · [04-reluare](./04-reluare.md) · [05-model](./05-model-date.md) · [06-api](./06-api.md)
 
 ## Locații
 
@@ -12,105 +14,19 @@ Ultima actualizare: 24 septembrie 2026
 | GitHub | https://github.com/ruscalin-arhe/oratoriu |
 | Docs | https://github.com/ruscalin-arhe/oratoriu/blob/main/docs/README.md |
 | Vercel production | https://oratoriu.vercel.app |
-| Vercel preview | `https://oratoriu-XXXX-ruscalin-6904s-projects.vercel.app` |
-| Neon | proiect `Oratoriu`, `eu-central-1` (Frankfurt) |
+| Neon | proiect `Oratoriu`, `eu-central-1` |
 
-Colegii folosesc doar production: `https://oratoriu.vercel.app/login`.  
-Preview-ul Vercel cere cont Vercel. Nu se trimite.
+Colegii: doar `https://oratoriu.vercel.app/login`.
 
-## Status
+## Status scurt
 
-În producție, utilizabil intern.
+Producție = MVP 24 sept. Local = rapoarte from/to, concediu interval, UI people/projects compact, login fără middleware. Neîmpins.
 
-Gata:
+Auth: cookie `oratoriu_email`. Nu next-auth.
 
-- pontaj pe zi: client / proiect / activitate / ore / notă
-- ciornă, trimitere, deblocare, corectare
-- calendar pe o zi
-- nu se salvează ore fără proiect și activitate
-- clienți, proiecte, activități
-- proiect `—` (fără proiect numit)
-- angajați: nume, email, rol, parolă, cost/oră, tarif/oră
-- login email + parolă
-- meniu admin vs angajat
-- restanțe (azi)
-- raport lunar: ore, venit, cost, profit
-- CSV pentru Sheets
-- reminder email (cod există; cron Hobby Vercel nu rulează singur)
-- repo privat + Vercel + Neon
+## Rulare
 
-Limitări:
-
-- primul load de pontaj e lent (Neon cold start)
-- mobil incomplet pe unele pagini
-- Deployment Protection trebuie Off pe production
-- `.env` nu e în git; secretele sunt în Vercel
-
-## Model de date
-Client
-  └── Proiect   (inclusiv "—")
-        └── Activitate
-              └── Pontaj (angajat, zi, minute)
-
-Exemple:
-
-- Haufe / — / training
-- GU / — / project management
-- GU / Maps / implementare lincuri
-
-Profit (lună):
-
-- cost = ore × cost/h angajat
-- venit = ore facturabile × (tarif proiect, altfel tarif angajat)
-- profit = venit − cost
-
-Fără tarife, profitul e 0.
-
-## Rulare locală
-
-```bash
-cd ~/Projects/oratoriu
+cd /Users/crus/Projects/oratoriu
 npx next dev --port 3000
-Pontaj: http://localhost:3000/today
-Login: http://localhost:3000/login
-Rapoarte: http://localhost:3000/reports
-Angajați: http://localhost:3000/people
 
-Variabile .env:DATABASE_URL — Neon pooler + connection_limit=5
-AUTH_SECRET
-CRON_SECRET
-APP_URL
-RESEND_API_KEY (opțional)
-EMAIL_FROM (opțional)
-
-Env Vercel: DATABASE_URL, AUTH_SECRET, CRON_SECRET, APP_URL
-Production + Preview. Type Secret. După schimbare: Redeploy.Acces echipă: Protection Off pe production, parola o pune adminul în Angajați.PlanificareP0 — următorul pas: raport temporalFiltre:de la / până la (input type="date")
-angajat (toți / unul)
-client
-proiect
-activitate (opțional)
-
-Rezultat pe interval:ore lucrate: total, pe angajat, pe proiect, pe zi
-ore nelucrate: așteptate − lucrate
-zile MISSING / DRAFT
-
-Reguli ore nelucrate:așteptate = zile lucrătoare × programul omului
-weekend + sărbători RO = 0
-concediu (TimeOff) scade din așteptat
-nelucrate = max(0, așteptate − lucrate)
-
-API:GET /api/reports?from=YYYY-MM-DD&to=YYYY-MM-DD&userId=&clientId=&projectId=CSV-ul folosește aceleași from / to.P1activități: rename / delete
-tarif proiect în UI
-restanțe pe interval
-Resend pe production
-Sheets OAuth
-pontaj mobil pe carduri
-audit deblocări
-
-P2profit pe interval liber
-buget vs consumat
-dashboard o pagină
-
-Nu facemClockify
-timer start/stop
-app nativă
+.env: DATABASE_URL (pooler), AUTH_SECRET, CRON_SECRET, APP_URL.
