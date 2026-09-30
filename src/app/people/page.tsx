@@ -165,10 +165,13 @@ export default function PeoplePage() {
                         <button
                           type="button"
                           className="ghost"
-                          onClick={() =>
-                            confirm("Ștergi " + u.name + "?") &&
-                            fetch("/api/people/" + u.id, { method: "DELETE" }).then(load)
-                          }
+                          onClick={async () => {
+                            if (!confirm("Ștergi " + u.name + " și orele lui?")) return;
+                            const res = await fetch("/api/people/" + u.id, { method: "DELETE" });
+                            const json = await readJson(res);
+                            if (!res.ok) setError(json.error || "Nu s-a șters");
+                            else { setOpenId(null); load(); }
+                          }}
                         >
                           Șterge
                         </button>

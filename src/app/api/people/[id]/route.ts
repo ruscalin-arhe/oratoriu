@@ -48,10 +48,10 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     if (me.role !== "ADMIN") return NextResponse.json({ error: "Doar adminul șterge." }, { status: 403 });
     const { id } = await params;
     if (me.id === id) return NextResponse.json({ error: "Nu poți să te ștergi pe tine." }, { status: 400 });
-    const entries = await prisma.timeEntry.count({ where: { userId: id } });
-    if (entries > 0) return NextResponse.json({ error: "Are ore pontate." }, { status: 400 });
-    await prisma.projectMember.deleteMany({ where: { userId: id } });
+    await prisma.timeEntry.deleteMany({ where: { userId: id } });
+    await prisma.timeOff.deleteMany({ where: { userId: id } });
     await prisma.dayReport.deleteMany({ where: { userId: id } });
+    await prisma.projectMember.deleteMany({ where: { userId: id } });
     await prisma.user.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (e) {
