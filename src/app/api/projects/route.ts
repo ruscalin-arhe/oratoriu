@@ -8,7 +8,7 @@ export async function GET() {
     include: {
       client: true,
       members: { include: { user: true } },
-      tasks: { orderBy: [{ sortOrder: "asc" }, { name: "asc" }] },
+      tasks: true,
     },
     orderBy: { name: "asc" },
   });
