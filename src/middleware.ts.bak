@@ -1,0 +1,49 @@
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+
+const PUBLIC_EXACT = new Set(["/login"]);
+
+function isPublic(pathname: string) {
+  if (PUBLIC_EXACT.has(pathname)) return true;
+  if (pathname.startsWith("/api/auth")) return true;
+  if (pathname.startsWith("/_next")) return true;
+  if (pathname === "/favicon.ico") return true;
+  return false;
+}
+
+function hasSession(req: NextRequest) {
+  const names = [
+    "authjs.session-token",
+    "__Secure-authjs.session-token",
+    "next-auth.session-token",
+    "__Secure-next-auth.session-token",
+    "session",
+    "oratoriu-session",
+  ];
+  return names.some((n) => Boolean(req.cookies.get(n)?.value));
+}
+
+export function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl;
+  if (isPublic(pathname)) {
+    if (hasSession(req) && pathname === "/login") {
+      return NextResponse.redirect(new URL("/today", req.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (!hasSession(req)) {
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json({ error: "Nimeni nu e logat." }, { status: 401 });
+    }
+    const url = new URL("/login", req.url);
+    url.searchParams.set("next", pathname);
+    return NextResponse.redirect(url);
+  }
+
+  return NextResponse.next();
+}
+
+export const config = {
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+};
