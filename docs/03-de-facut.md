@@ -1,12 +1,14 @@
-# 3. Ce mai e de făcut
+# De făcut — pauză 30 sept
 
-Totul se face în consolă, în /Users/crus/Projects/oratoriu.
-Colegii folosesc doar https://oratoriu.vercel.app/login.
+Opriți feature-ele. Următorul pas, când reluați:
 
-P0 raport temporal: from, to, angajat, client, proiect, activitate.
-GET /api/reports?from=&to=&userId=&clientId=&projectId=
-CSV cu aceleași from/to.
+1. Build Vercel verde fără `sortOrder` în API, SAU migrate + `prisma generate` în build.
+2. Confirmă incognito /projects = dropdown, nu tabel.
+3. Apoi: ↑↓ ordine proces; comparație angajați × proiecte (ore); buget vs consumat.
 
-P1: rename/delete activități, tarif proiect UI, restanțe interval, Resend, Sheets, pontaj mobil, audit deblocări.
-P2: profit interval, buget vs consumat, dashboard.
-Nu facem: Clockify, timer, app nativă.
+Nu: Clockify, timer, app nativă.
+
+Consolă:
+
+cd /Users/crus/Projects/oratoriu
+npx next dev --port 3002

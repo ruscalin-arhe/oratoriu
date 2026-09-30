@@ -1,27 +1,23 @@
-# 1. Starea aplicației
-
-Data: 24 septembrie 2026
-
-În producție, utilizabil intern. Primul load poate fi lent (Neon cold start).
-
-## Medii
-
-- Local: /Users/crus/Projects/oratoriu
-- GitHub: https://github.com/ruscalin-arhe/oratoriu
-- Production: https://oratoriu.vercel.app
-- Login: https://oratoriu.vercel.app/login
-- Neon: Oratoriu, eu-central-1
+# Stare — 30 sept 2026
 
 ## Gata
 
-- pontaj pe zi, ciornă, trimitere, deblocare
-- clienți, proiecte, activități, proiect —
-- angajați, login, meniu admin/angajat
-- restanțe azi, raport lunar, CSV
-- reminder: cod există, cron Hobby nu rulează singur
+- pontaj zi: proiect (search) / activitate / ore / notă
+- ciornă, trimitere, deblocare
+- clienți, proiecte, activități; fără proiect duplicat pe același client
+- angajați creați de admin; parolă Oratoriu, nu Gmail
+- restanțe azi, raport interval, CSV
+- ștergere user (cu ore, cascade) și activitate (doar fără ore)
+- meniu: pe login doar Schimbă user; /today fără sesiune → /login
 
-## Limitări
+## Local vs producție
 
-- cold start Neon, mobil incomplet
-- raport doar pe lună, nu pe interval
-- next-auth nefolosit; cookie oratoriu_email
+| Local :3002 | Vercel |
+|---|---|
+| dropdown client → proiect → activități | poate fi încă tabel (build fail) |
+| CSS aerisit | depinde de ultimul deploy verde |
+
+## Blocaj producție
+
+`sortOrder` pe Task nu e în clientul Prisma de pe Vercel.
+`next build` pică TS2353. Nu mai împinge sortOrder până e în schema + generate pe CI.
