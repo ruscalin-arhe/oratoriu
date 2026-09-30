@@ -27,22 +27,24 @@ export default function LoginPage() {
     <main>
       <h1>Intră în Oratoriu</h1>
       {error && <p style={{ color: "#8a2e1a" }}>{error}</p>}
-      <input
-        type="email"
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-      />
-      <input
-        type="password"
-        placeholder="Parolă"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        onKeyDown={(e) => e.key === "Enter" && enter()}
-      />
-      <button type="button" onClick={enter} disabled={!email || !password}>
-        Intră
-      </button>
+      <div className="login-row">
+        <input
+          type="email"
+          placeholder="Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+        <input
+          type="password"
+          placeholder="Parolă"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && enter()}
+        />
+        <button type="button" onClick={enter} disabled={!email || !password}>
+          Intră
+        </button>
+      </div>
     </main>
   );
 }

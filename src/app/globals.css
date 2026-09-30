@@ -198,3 +198,20 @@ table.sheet .hours { width: 72px; }
   main { padding: 18px 16px 24px; }
   table.sheet { display: block; overflow-x: auto; }
 }
+
+.login-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-top: 8px;
+}
+.login-row input {
+  margin: 0;
+  min-width: 200px;
+  flex: 1;
+}
+.login-row button {
+  margin: 0;
+  padding: 8px 20px;
+}
