@@ -12,6 +12,7 @@ type Client = {
 export default function ClientsPage() {
   const [items, setItems] = useState<Client[]>([]);
   const [name, setName] = useState("");
+  const [fromClientId, setFromClientId] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const [error, setError] = useState("");
@@ -25,6 +26,19 @@ export default function ClientsPage() {
 
   async function add() {
     setError("");
+    if (fromClientId) {
+      const res = await fetch("/api/catalog/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "client", fromClientId, name }),
+      });
+      const json = await res.json();
+      if (!res.ok) return setError(json.error || "Eroare copiere");
+      setName("");
+      setFromClientId("");
+      load();
+      return;
+    }
     const res = await fetch("/api/clients", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -65,12 +79,20 @@ export default function ClientsPage() {
       <h1>Clienți</h1>
       {error && <p style={{ color: "#8a2e1a" }}>{error}</p>}
 
-      <div className="actions">
+      <div className="actions" style={{ flexWrap: "wrap" }}>
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nume client nou"
         />
+        <select value={fromClientId} onChange={(e) => setFromClientId(e.target.value)}>
+          <option value="">Fără copiere structură</option>
+          {items.map((c) => (
+            <option key={c.id} value={c.id}>
+              Copiază proiecte + activități de la {c.name}
+            </option>
+          ))}
+        </select>
         <button type="button" onClick={add}>
           Adaugă
         </button>

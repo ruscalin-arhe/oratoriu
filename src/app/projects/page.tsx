@@ -1,81 +1,136 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<any[]>([]);
   const [clients, setClients] = useState<any[]>([]);
-  const [name, setName] = useState("");
   const [clientId, setClientId] = useState("");
-  const [activity, setActivity] = useState<Record<string, string>>({});
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingName, setEditingName] = useState("");
-  const [addingFor, setAddingFor] = useState<string | null>(null);
+  const [projectId, setProjectId] = useState("");
+  const [newName, setNewName] = useState("");
+  const [fromProjectId, setFromProjectId] = useState("");
+  const [activity, setActivity] = useState("");
+  const [editingName, setEditingName] = useState<string | null>(null);
   const [error, setError] = useState("");
+
+  async function readJson(res: Response) {
+    const text = await res.text();
+    if (!text) return { error: "Răspuns gol" };
+    try {
+      return JSON.parse(text);
+    } catch {
+      return { error: text };
+    }
+  }
 
   async function load() {
     const [p, c] = await Promise.all([
-      fetch("/api/projects").then((r) => r.json()),
-      fetch("/api/clients").then((r) => r.json()),
+      fetch("/api/projects").then(readJson),
+      fetch("/api/clients").then(readJson),
     ]);
     setProjects(Array.isArray(p) ? p : []);
     setClients(Array.isArray(c) ? c : []);
+    const err = (!Array.isArray(p) && p.error) || (!Array.isArray(c) && c.error);
+    if (err) setError(String(err));
   }
+
   useEffect(() => {
     load();
   }, []);
 
+  const forClient = useMemo(
+    () => projects.filter((p) => (p.clientId || p.client?.id) === clientId),
+    [projects, clientId],
+  );
+  const current = forClient.find((p) => p.id === projectId) ?? null;
+  const tasks = (current?.tasks ?? [])
+    .slice()
+    .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  function pickClient(id: string) {
+    setClientId(id);
+    setProjectId("");
+    setFromProjectId("");
+    setActivity("");
+  }
+
   async function addProject() {
+    if (!clientId) return;
     setError("");
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name || "—", clientId }),
+      body: JSON.stringify({ name: newName || "—", clientId }),
     });
-    const json = await res.json();
+    const json = await readJson(res);
     if (!res.ok) return setError(json.error || "Eroare proiect");
-    setName("");
-    load();
+    if (json.id && fromProjectId) {
+      await fetch("/api/catalog/clone", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: "tasks", fromProjectId, toProjectId: json.id }),
+      });
+    }
+    setNewName("");
+    setFromProjectId("");
+    await load();
+    if (json.id) setProjectId(json.id);
   }
 
-  async function addActivity(projectId: string) {
-    const taskName = (activity[projectId] || "").trim();
-    if (!taskName) return;
+  async function addActivity() {
+    if (!projectId || !activity.trim()) return;
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ projectId, name: taskName }),
+      body: JSON.stringify({ projectId, name: activity.trim() }),
     });
-    const json = await res.json();
+    const json = await readJson(res);
     if (!res.ok) return setError(json.error || "Eroare activitate");
-    setActivity((a) => ({ ...a, [projectId]: "" }));
-    setAddingFor(null);
+    setActivity("");
     load();
   }
 
-  async function patch(id: string, body: object) {
-    const res = await fetch(`/api/projects/${id}`, {
+  async function deleteTask(id: string, label: string) {
+    if (!confirm("Ștergi activitatea „" + label + "”?")) return;
+    const res = await fetch("/api/tasks/" + id, { method: "DELETE" });
+    const json = await readJson(res);
+    if (!res.ok) return setError(json.error || "Nu s-a șters");
+    load();
+  }
+
+  async function moveTask(id: string, dir: "up" | "down") {
+    const res = await fetch("/api/tasks/" + id, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      body: JSON.stringify({ dir }),
     });
-    const json = await res.json();
+    const json = await readJson(res);
+    if (!res.ok) return setError(json.error || "Nu s-a mutat");
+    load();
+  }
+
+  async function saveName() {
+    if (!current || editingName == null) return;
+    const next = editingName.trim();
+    setEditingName(null);
+    if (!next || next === current.name) return;
+    const res = await fetch("/api/projects/" + current.id, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: next }),
+    });
+    const json = await readJson(res);
     if (!res.ok) return setError(json.error);
     load();
   }
 
-  async function saveName(id: string, original: string) {
-    const next = editingName.trim();
-    setEditingId(null);
-    if (!next || next === original) return;
-    patch(id, { name: next });
-  }
-
-  async function remove(id: string, label: string) {
-    if (!confirm(`Ștergi proiectul „${label}”?`)) return;
-    const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
-    const json = await res.json();
+  async function removeProject() {
+    if (!current) return;
+    if (!confirm("Ștergi proiectul „" + current.name + "”?")) return;
+    const res = await fetch("/api/projects/" + current.id, { method: "DELETE" });
+    const json = await readJson(res);
     if (!res.ok) return setError(json.error);
+    setProjectId("");
     load();
   }
 
@@ -85,116 +140,88 @@ export default function ProjectsPage() {
       {error && <p style={{ color: "#8a2e1a" }}>{error}</p>}
 
       <div className="top-add">
-        <select value={clientId} onChange={(e) => setClientId(e.target.value)}>
+        <select value={clientId} onChange={(e) => pickClient(e.target.value)}>
           <option value="">Client</option>
           {clients.map((c) => (
             <option key={c.id} value={c.id}>{c.name}</option>
           ))}
         </select>
+        <select
+          value={projectId}
+          onChange={(e) => setProjectId(e.target.value)}
+          disabled={!clientId}
+        >
+          <option value="">{clientId ? "Proiect" : "Alege clientul"}</option>
+          {forClient.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+      </div>
+
+      <div className="top-add">
         <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Proiect (sau — )"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Proiect nou (sau — )"
+          disabled={!clientId}
         />
+        <select
+          value={fromProjectId}
+          onChange={(e) => setFromProjectId(e.target.value)}
+          disabled={!clientId}
+        >
+          <option value="">Fără copiere activități</option>
+          {projects.map((p) => (
+            <option key={p.id} value={p.id}>
+              {p.client?.name} / {p.name}
+            </option>
+          ))}
+        </select>
         <button type="button" onClick={addProject} disabled={!clientId}>
           Adaugă proiect
         </button>
       </div>
 
-      <table className="sheet">
-        <colgroup>
-          <col style={{ width: "24%" }} />
-          <col style={{ width: "24%" }} />
-          <col style={{ width: "40%" }} />
-          <col style={{ width: "12%" }} />
-        </colgroup>
-        <thead>
-          <tr>
-            <th>Client</th>
-            <th>Proiect</th>
-            <th>Activități</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          {projects.map((p) => (
-            <tr key={p.id}>
-              <td>
-                <span className="cell-clip">{p.client?.name}</span>
-              </td>
-              <td>
-                {editingId === p.id ? (
-                  <input
-                    autoFocus
-                    value={editingName}
-                    onChange={(e) => setEditingName(e.target.value)}
-                    onBlur={() => saveName(p.id, p.name)}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" && (e.target as HTMLInputElement).blur()
-                    }
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    className="cell-edit cell-clip"
-                    onClick={() => {
-                      setEditingId(p.id);
-                      setEditingName(p.name);
-                    }}
-                  >
-                    {p.name}
-                  </button>
-                )}
-              </td>
-              <td>
-                <select
-                  value={addingFor === p.id ? "__new" : ""}
-                  onChange={(e) => {
-                    if (e.target.value === "__new") setAddingFor(p.id);
-                    else setAddingFor(null);
-                  }}
-                >
-                  <option value="">
-                    {(p.tasks ?? []).length
-                      ? `${(p.tasks ?? []).length} activități`
-                      : "Fără activități"}
-                  </option>
-                  {(p.tasks ?? []).map((t: any) => (
-                    <option key={t.id} value={t.id} disabled>
-                      {t.name}
-                    </option>
-                  ))}
-                  <option value="__new">+ activitate nouă</option>
-                </select>
-                {addingFor === p.id && (
-                  <div className="add-task" style={{ marginTop: 6 }}>
-                    <input
-                      autoFocus
-                      value={activity[p.id] ?? ""}
-                      onChange={(e) =>
-                        setActivity((a) => ({ ...a, [p.id]: e.target.value }))
-                      }
-                      placeholder="nume activitate"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") addActivity(p.id);
-                        if (e.key === "Escape") setAddingFor(null);
-                      }}
-                    />
-                    <button type="button" className="ghost" onClick={() => addActivity(p.id)}>
-                      OK
-                    </button>
-                  </div>
-                )}
-              </td>
-              <td>
-                <button type="button" className="ghost" onClick={() => remove(p.id, p.name)}>
-                  Șterge
-                </button>
-              </td>
-            </tr>
+      {current && (
+        <>
+          <h2>
+            {current.client?.name} /{" "}
+            {editingName == null ? (
+              <button type="button" className="cell-edit" onClick={() => setEditingName(current.name)}>
+                {current.name}
+              </button>
+            ) : (
+              <input
+                autoFocus
+                value={editingName}
+                onChange={(e) => setEditingName(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+              />
+            )}
+          </h2>
+          <p>Activitățile apar în ordinea procesului.</p>
+          {tasks.map((t: any) => (
+            <div key={t.id} className="actions">
+              <span>{t.name}</span>
+              <button type="button" className="ghost" title="Sus" onClick={() => moveTask(t.id, "up")}>↑</button>
+              <button type="button" className="ghost" title="Jos" onClick={() => moveTask(t.id, "down")}>↓</button>
+              <button type="button" className="ghost" title="Șterge" onClick={() => deleteTask(t.id, t.name)}>×</button>
+            </div>
           ))}
-        </tbody>
-      </table>
+          {!tasks.length && <p>Nicio activitate pe proiectul ăsta.</p>}
+          <div className="add-task">
+            <input
+              value={activity}
+              onChange={(e) => setActivity(e.target.value)}
+              placeholder="următorul pas din proces"
+              onKeyDown={(e) => e.key === "Enter" && addActivity()}
+            />
+            <button type="button" className="ghost" onClick={addActivity}>Adaugă activitate</button>
+            <button type="button" className="ghost" onClick={removeProject}>Șterge proiectul</button>
+          </div>
+        </>
+      )}
     </main>
   );
 }

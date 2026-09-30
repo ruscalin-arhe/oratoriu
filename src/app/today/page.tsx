@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 type Line = {
   key: string;
@@ -9,6 +9,8 @@ type Line = {
   taskId: string;
   hours: string;
   notes: string;
+  query: string;
+  open: boolean;
 };
 
 function uid() {
@@ -26,20 +28,22 @@ function todayApi(path = "") {
   return `/api/today${path}${q}`;
 }
 
+function labelOf(p: any) {
+  return `${p.client?.name ?? ""} / ${p.name}`;
+}
+
+function emptyLine(): Line {
+  return { key: uid(), clientId: "", projectId: "", taskId: "", hours: "1", notes: "", query: "", open: false };
+}
+
 export default function TodayPage() {
   const [data, setData] = useState<any>(null);
   const [clients, setClients] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
-  const [lines, setLines] = useState<Line[]>([
-    { key: uid(), clientId: "", projectId: "", taskId: "", hours: "1", notes: "" },
-  ]);
+  const [lines, setLines] = useState<Line[]>([emptyLine()]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const locked = data?.status === "SUBMITTED";
-
-  function projectsFor(clientId: string) {
-    return projects.filter((p) => (p.clientId || p.client?.id) === clientId);
-  }
 
   function tasksFor(projectId: string) {
     const p = projects.find((x) => x.id === projectId);
@@ -72,32 +76,70 @@ export default function TodayPage() {
     } catch {}
 
     if (todayJson.entries?.length) {
-      setLines(todayJson.entries.map((e: any) => ({
-        key: e.id,
-        clientId: e.project.client.id,
-        projectId: e.projectId,
-        taskId: e.taskId || "",
-        hours: String(e.minutes / 60),
-        notes: e.notes ?? "",
-      })));
+      setLines(
+        todayJson.entries.map((e: any) => ({
+          key: e.id,
+          clientId: e.project.client.id,
+          projectId: e.projectId,
+          taskId: e.taskId || "",
+          hours: String(e.minutes / 60),
+          notes: e.notes ?? "",
+          query: `${e.project.client.name} / ${e.project?.name ?? ""}`.replace(/\/\s*$/, ""),
+          open: false,
+        })),
+      );
     } else {
-      setLines([{ key: uid(), clientId: "", projectId: "", taskId: "", hours: "1", notes: "" }]);
+      setLines([emptyLine()]);
     }
   }
 
   useEffect(() => {
-    load();
+    fetch("/api/session")
+      .then((r) => r.text())
+      .then((text) => {
+        const d = text ? JSON.parse(text) : {};
+        if (!d.user) window.location.href = "/login";
+        else load();
+      })
+      .catch(() => {
+        window.location.href = "/login";
+      });
   }, []);
 
   function update(key: string, patch: Partial<Line>) {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   }
 
+  function pickProject(lineKey: string, p: any) {
+    update(lineKey, {
+      clientId: p.clientId || p.client?.id || "",
+      projectId: p.id,
+      taskId: "",
+      query: labelOf(p),
+      open: false,
+    });
+  }
+
+  function filtered(query: string) {
+    const q = query.trim().toLowerCase();
+    if (!q) return projects.slice(0, 12);
+    return projects
+      .filter((p) => labelOf(p).toLowerCase().includes(q))
+      .slice(0, 12);
+  }
+
   async function save(submit = false) {
     setError("");
     const incomplete = lines.some((l) => Number(l.hours) > 0 && (!l.projectId || !l.taskId));
     if (incomplete) {
-      return setError("Fiecare rând cu ore trebuie client, proiect și activitate.");
+      return setError("Fiecare rând cu ore trebuie proiect și activitate.");
+    }
+    const seen = new Set<string>();
+    for (const l of lines) {
+      if (!l.projectId || Number(l.hours) <= 0) continue;
+      const k = l.projectId + "::" + l.taskId;
+      if (seen.has(k)) return setError("Nu dubla același proiect + activitate în aceeași zi.");
+      seen.add(k);
     }
     const entries = lines
       .filter((l) => l.projectId && l.taskId && Number(l.hours) > 0)
@@ -140,8 +182,7 @@ export default function TodayPage() {
     await load();
   }
 
-  const totalHours = lines.reduce((s, l) => s + (Number(l.hours) || 0), 0);
-  
+  const unused = clients;
 
   return (
     <main>
@@ -161,7 +202,6 @@ export default function TodayPage() {
       <table className="sheet">
         <thead>
           <tr>
-            <th>Client</th>
             <th>Proiect</th>
             <th>Activitate</th>
             <th>Ore</th>
@@ -172,21 +212,51 @@ export default function TodayPage() {
         <tbody>
           {lines.map((l) => (
             <tr key={l.key}>
-              <td>
-                <select disabled={locked} value={l.clientId} onChange={(e) => update(l.key, { clientId: e.target.value, projectId: "", taskId: "" })}>
-                  <option value="">Alege</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </td>
-              <td>
-                <select disabled={locked} value={l.projectId} onChange={(e) => update(l.key, { projectId: e.target.value, taskId: "" })}>
-                  <option value="">Alege</option>
-                  {projectsFor(l.clientId).map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name}</option>
-                  ))}
-                </select>
+              <td style={{ position: "relative", minWidth: 220 }}>
+                <input
+                  disabled={locked}
+                  value={l.query}
+                  placeholder="caută client sau proiect"
+                  onFocus={() => update(l.key, { open: true })}
+                  onChange={(e) =>
+                    update(l.key, {
+                      query: e.target.value,
+                      open: true,
+                      projectId: "",
+                      clientId: "",
+                      taskId: "",
+                    })
+                  }
+                />
+                {l.open && !locked && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      zIndex: 20,
+                      background: "#fff",
+                      border: "1px solid #d7d0c4",
+                      maxHeight: 220,
+                      overflow: "auto",
+                      width: "100%",
+                    }}
+                  >
+                    {filtered(l.query).map((p: any) => (
+                      <button
+                        key={p.id}
+                        type="button"
+                        className="cell-edit"
+                        style={{ display: "block", width: "100%", textAlign: "left", padding: 6 }}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => pickProject(l.key, p)}
+                      >
+                        {labelOf(p)}
+                      </button>
+                    ))}
+                    {filtered(l.query).length === 0 && (
+                      <div style={{ padding: 8, color: "#6f675c" }}>Nimic. Adaugă proiectul din meniu Proiecte.</div>
+                    )}
+                  </div>
+                )}
               </td>
               <td>
                 <select disabled={locked} value={l.taskId} onChange={(e) => update(l.key, { taskId: e.target.value })}>
@@ -203,14 +273,27 @@ export default function TodayPage() {
                 <input disabled={locked} value={l.notes} onChange={(e) => update(l.key, { notes: e.target.value })} />
               </td>
               <td>
-                <button type="button" className="ghost" disabled={locked} onClick={() => setLines((prev) => prev.length === 1 ? [{ key: uid(), clientId: "", projectId: "", taskId: "", hours: "", notes: "" }] : prev.filter((x) => x.key !== l.key))}>Sterge</button>
+                <button
+                  type="button"
+                  className="ghost"
+                  disabled={locked}
+                  onClick={() =>
+                    setLines((prev) =>
+                      prev.length === 1 ? [emptyLine()] : prev.filter((x) => x.key !== l.key),
+                    )
+                  }
+                >
+                  Sterge
+                </button>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
       <div className="actions">
-        <button type="button" className="ghost" disabled={locked} onClick={() => setLines([...lines, { key: uid(), clientId: "", projectId: "", taskId: "", hours: "1", notes: "" }])}>+ rand</button>
+        <button type="button" className="ghost" disabled={locked} onClick={() => setLines([...lines, emptyLine()])}>
+          + rand
+        </button>
         {!locked && (
           <>
             <button type="button" disabled={saving} onClick={() => save(false)}>Salveaza</button>
