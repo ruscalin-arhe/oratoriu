@@ -100,14 +100,26 @@ export default function ProjectsPage() {
   }
 
   async function moveTask(id: string, dir: "up" | "down") {
+    if (!current) return;
+    const list = tasks.slice();
+    const i = list.findIndex((t: any) => t.id === id);
+    const j = dir === "up" ? i - 1 : i + 1;
+    if (i < 0 || j < 0 || j >= list.length) return;
+    const next = list.slice();
+    const [moved] = next.splice(i, 1);
+    next.splice(j, 0, moved);
+    const ordered = next.map((t: any, idx: number) => ({ ...t, sortOrder: idx }));
+    setProjects((prev) => prev.map((p) => (p.id === current.id ? { ...p, tasks: ordered } : p)));
     const res = await fetch("/api/tasks/" + id, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ dir }),
     });
     const json = await readJson(res);
-    if (!res.ok) return setError(json.error || "Nu s-a mutat");
-    load();
+    if (!res.ok) {
+      setError(json.error || "Nu s-a mutat");
+      load();
+    }
   }
 
   async function saveName() {

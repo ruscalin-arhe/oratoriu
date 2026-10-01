@@ -13,17 +13,16 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const siblings = await prisma.task.findMany({
       where: { projectId: task.projectId, active: true },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }, { id: "asc" }],
+      select: { id: true, sortOrder: true },
     });
     const i = siblings.findIndex((s) => s.id === id);
     const j = dir === "up" ? i - 1 : dir === "down" ? i + 1 : -1;
     if (i < 0 || j < 0 || j >= siblings.length) return NextResponse.json({ ok: true });
 
-    const next = siblings.slice();
-    const [moved] = next.splice(i, 1);
-    next.splice(j, 0, moved);
-    await prisma.$transaction(
-      next.map((t, idx) => prisma.task.update({ where: { id: t.id }, data: { sortOrder: idx } })),
-    );
+    await prisma.$transaction([
+      prisma.task.update({ where: { id: siblings[i].id }, data: { sortOrder: j } }),
+      prisma.task.update({ where: { id: siblings[j].id }, data: { sortOrder: i } }),
+    ]);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 400 });
