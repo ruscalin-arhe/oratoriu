@@ -110,16 +110,17 @@ export default function ProjectsPage() {
     next.splice(j, 0, moved);
     const ordered = next.map((t: any, idx: number) => ({ ...t, sortOrder: idx }));
     setProjects((prev) => prev.map((p) => (p.id === current.id ? { ...p, tasks: ordered } : p)));
-    const res = await fetch("/api/tasks/" + id, {
+    fetch("/api/tasks/" + id, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ dir }),
+    }).then(async (res) => {
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}));
+        setError(json.error || "Nu s-a mutat");
+        load();
+      }
     });
-    const json = await readJson(res);
-    if (!res.ok) {
-      setError(json.error || "Nu s-a mutat");
-      load();
-    }
   }
 
   async function saveName() {
