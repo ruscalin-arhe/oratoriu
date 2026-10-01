@@ -221,3 +221,9 @@ table.sheet .hours { width: 72px; }
   opacity: 1;
   cursor: pointer;
 }
+
+.add-task button,
+.actions button.ghost {
+  opacity: 1;
+  cursor: pointer;
+}
