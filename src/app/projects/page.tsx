@@ -78,7 +78,8 @@ export default function ProjectsPage() {
   }
 
   async function addActivity() {
-    if (!projectId || !activity.trim()) return;
+    if (!projectId) return setError("Alege întâi un proiect.");
+    if (!activity.trim()) return setError("Scrie numele activității.");
     const res = await fetch("/api/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -217,7 +218,7 @@ export default function ProjectsPage() {
               placeholder="următorul pas din proces"
               onKeyDown={(e) => e.key === "Enter" && addActivity()}
             />
-            <button type="button" className="ghost" onClick={addActivity}>Adaugă activitate</button>
+            <button type="button" onClick={addActivity}>Adaugă activitate</button>
             <button type="button" className="ghost" onClick={removeProject}>Șterge proiectul</button>
           </div>
         </>
