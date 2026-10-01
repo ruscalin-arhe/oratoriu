@@ -227,3 +227,25 @@ table.sheet .hours { width: 72px; }
   opacity: 1;
   cursor: pointer;
 }
+
+.add-task,
+.top-add,
+.login-row {
+  position: relative;
+  z-index: 1;
+}
+.add-task input,
+.top-add input,
+.login-row input {
+  width: auto;
+  flex: 1 1 180px;
+  min-width: 160px;
+  max-width: 320px;
+}
+.add-task button,
+.top-add button {
+  position: relative;
+  z-index: 2;
+  flex: 0 0 auto;
+  pointer-events: auto;
+}
