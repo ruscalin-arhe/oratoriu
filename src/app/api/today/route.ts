@@ -45,6 +45,7 @@ async function payload(iso: string) {
         project: {
           select: {
             id: true,
+            name: true,
             clientId: true,
             client: { select: { id: true, name: true } },
           },
